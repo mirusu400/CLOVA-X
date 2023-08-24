@@ -5,5 +5,5 @@ __all__ = [
     "ClovaX",
 ]
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 __author__ = "mirusu400 <mirusu400@naver.com>"

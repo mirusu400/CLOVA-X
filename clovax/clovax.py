@@ -1,3 +1,4 @@
+from calendar import c
 import requests
 import json
 import os.path
@@ -69,10 +70,10 @@ class ClovaX:
 
     def _build_data(
         self,
-        text: str,
         action: str,
-        parentTurnId: Union[str, None] = None,
-        conversationId: Union[str, None] = None,
+        text: Union[str, None] = None,
+        parent_turn_id: Union[str, None] = None,
+        conversation_id: Union[str, None] = None,
     ) -> bytes:
         """
         Build multipart/form-data.
@@ -83,15 +84,14 @@ class ClovaX:
             % self.boundary
         )
 
-        data += '{"text":"%s","action":"%s"' % (
-            text,
-            action,
-        )
+        data += '{"action": "%s"' % action
 
-        if parentTurnId:
-            data += ',"parentTurnId":"%s"' % parentTurnId
-        if conversationId:
-            data += ',"conversationId":"%s"' % conversationId
+        if text:
+            data += ',"text":"%s"' % text
+        if parent_turn_id:
+            data += ',"parentTurnId":"%s"' % parent_turn_id
+        if conversation_id:
+            data += ',"conversationId":"%s"' % conversation_id
 
         data += "}\r\n------WebKitFormBoundary%s--\r\n" % self.boundary
 
@@ -131,6 +131,11 @@ class ClovaX:
                 )
         return r
 
+    def _parse_latest_data(self, conversation_data: dict) -> dict:
+        latest_turn_id = conversation_data["path"][-1]
+        latest_data = conversation_data["turnTree"][latest_turn_id]
+        return latest_data["turn"]
+
     def start(self, prompt: str) -> dict:
         """
         Start conversation.
@@ -145,7 +150,7 @@ class ClovaX:
             raise clovax.errors.NoTokenSetError()
 
         self._init_session()
-        data = self._build_data(prompt, "new")
+        data = self._build_data("new", prompt)
         self.conversation_id = ""
 
         r = self._do_conversation(data)
@@ -174,7 +179,8 @@ class ClovaX:
                     r.close()
                     break
 
-        return self._get_conversation(self.conversation_id)
+        conversation_data = self._get_conversation(self.conversation_id)
+        return self._parse_latest_data(conversation_data)
 
     def conversation(self, prompt: str, conversation_id: Union[str, None] = None):
         if conversation_id:
@@ -183,8 +189,7 @@ class ClovaX:
         conversation_data = self._get_conversation(self.conversation_id)
         self.turn_id = conversation_data["path"][-1]
 
-        data = self._build_data(prompt, "generate", self.turn_id, self.conversation_id)
-
+        data = self._build_data("generate", prompt, self.turn_id, self.conversation_id)
         r = self._do_conversation(data)
 
         for line in r.iter_lines(decode_unicode=True):
@@ -197,4 +202,28 @@ class ClovaX:
                     r.close()
                     break
 
-        return self._get_conversation(self.conversation_id)
+        conversation_data = self._get_conversation(self.conversation_id)
+        return self._parse_latest_data(conversation_data)
+
+    def regenerate(self, conversation_id: Union[str, None] = None):
+        if conversation_id:
+            self.conversation_id = conversation_id
+
+        conversation_data = self._get_conversation(self.conversation_id)
+        self.turn_id = conversation_data["path"][-1]
+
+        data = self._build_data("regenerate", conversation_id=self.conversation_id)
+        r = self._do_conversation(data)
+
+        for line in r.iter_lines(decode_unicode=True):
+            if not line:
+                continue
+
+            if line.startswith("event:"):
+                event = line[6:]
+                if event == "result":
+                    r.close()
+                    break
+
+        conversation_data = self._get_conversation(self.conversation_id)
+        return self._parse_latest_data(conversation_data)
