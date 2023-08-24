@@ -29,7 +29,7 @@ from clovax import ClovaX
 c = ClovaX()
 c.get_cookie("[Your netscape cookie file]")
 log = c.start("Hello world!")
-print(log)
+print(log["text"])
 ```
 
 **Continue a conversation**
@@ -39,8 +39,20 @@ from clovax import ClovaX
 c = ClovaX()
 c.get_cookie("[Your netscape cookie file]")
 log = c.start("Hello world!")
+print(log["text"])
 log = c.continue_conversation("Who are you?")
-print(log)
+print(log["text"])
+```
+
+**Regenerate a conversation**
+```python
+from clovax import ClovaX
+
+c = ClovaX()
+c.get_cookie("[Your netscape cookie file]")
+log = c.start("Hello world!")
+log = c.regenerate()
+print(log["text"])
 ```
 
 
