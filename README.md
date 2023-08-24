@@ -1,7 +1,7 @@
 # Naver Clova X Unofficial API
 
 
-![clova-logo](./doc/clova-logo.png)
+![clova-logo](https://raw.githubusercontent.com/mirusu400/CLOVA-X/main/doc/clova-logo.png)
 
 <a href="https://pypi.org/project/clovax/"><img alt="PyPI package" src="https://img.shields.io/badge/pypi-clovax-green"></a>
 <a href="https://github.com/mirusu400/CLOVA-X/stargazers"><img src="https://img.shields.io/github/stars/mirusu400/CLOVA-X?style=social"></a>
@@ -28,7 +28,7 @@ from clovax import ClovaX
 
 c = ClovaX()
 c.get_cookie("[Your netscape cookie file]")
-log = c.start("test")
+log = c.start("Hello world!")
 print(log)
 ```
 
@@ -38,8 +38,8 @@ from clovax import ClovaX
 
 c = ClovaX()
 c.get_cookie("[Your netscape cookie file]")
-log = c.start("test", "안녕")
-log = c.continue_conversation("test", "오늘 저녁 알려줘")
+log = c.start("Hello world!")
+log = c.continue_conversation("Who are you?")
 print(log)
 ```
 
