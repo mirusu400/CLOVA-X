@@ -3,6 +3,7 @@ import json
 import os.path
 import random
 import string
+import clovax.errors
 from typing import Union
 
 
@@ -66,20 +67,34 @@ class ClovaX:
                         self.CVX_SES = value
         return
 
-    def _build_data(self, text: str, action: str) -> str:
+    def _build_data(
+        self,
+        text: str,
+        action: str,
+        parentTurnId: Union[str, None] = None,
+        conversationId: Union[str, None] = None,
+    ) -> bytes:
         """
         Build multipart/form-data.
         """
 
         data = (
-            '------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name="form"; filename="blob"\r\nContent-Type: application/json\r\n\r\n{"text":"%s","action":"%s"}\r\n------WebKitFormBoundary%s--\r\n'
-            % (
-                self.boundary,
-                text,
-                action,
-                self.boundary,
-            )
+            '------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name="form"; filename="blob"\r\nContent-Type: application/json\r\n\r\n'
+            % self.boundary
         )
+
+        data += '{"text":"%s","action":"%s"' % (
+            text,
+            action,
+        )
+
+        if parentTurnId:
+            data += ',"parentTurnId":"%s"' % parentTurnId
+        if conversationId:
+            data += ',"conversationId":"%s"' % conversationId
+
+        data += "}\r\n------WebKitFormBoundary%s--\r\n" % self.boundary
+
         return data.encode()
 
     def _init_session(self) -> None:
@@ -92,6 +107,30 @@ class ClovaX:
             }
         )
 
+    def _get_conversation(self, conversation_id: str) -> dict:
+        r = self.session.get(
+            f"https://clova-x.naver.com/api/v1/conversation/{conversation_id}",
+        )
+        return r.json()
+
+    def _do_conversation(self, data: bytes) -> requests.Response:
+        r = self.session.post(
+            "https://clova-x.naver.com/api/v1/generate",
+            data=data,
+            stream=True,
+        )
+
+        if r.status_code != 200:
+            if r.status_code == 401:
+                raise clovax.errors.UnauthorizedError()
+            elif r.status_code == 429:
+                raise clovax.errors.TooManyRequestsError()
+            else:
+                raise Exception(
+                    f"Error occurred while starting conversation. Error code: {r.status_code}"
+                )
+        return r
+
     def start(self, prompt: str) -> dict:
         """
         Start conversation.
@@ -102,17 +141,14 @@ class ClovaX:
         Returns:
             dict: Conversation data.
         """
+        if self.NID_SES is None or self.NID_AUT is None or self.CVX_SES is None:
+            raise clovax.errors.NoTokenSetError()
+
         self._init_session()
         data = self._build_data(prompt, "new")
-        r = self.session.post(
-            "https://clova-x.naver.com/api/v1/generate",
-            data=data,
-            stream=True,
-        )
         self.conversation_id = ""
-        if r.status_code != 200:
-            print(r.text)
-            raise Exception("Error occurred while starting conversation.")
+
+        r = self._do_conversation(data)
 
         # Iterate event stream, get event and datas
         for line in r.iter_lines(decode_unicode=True):
@@ -138,8 +174,27 @@ class ClovaX:
                     r.close()
                     break
 
-        r = self.session.get(
-            f"https://clova-x.naver.com/api/v1/conversation/{self.conversation_id}",
-        )
+        return self._get_conversation(self.conversation_id)
 
-        return r.json()
+    def conversation(self, prompt: str, conversation_id: Union[str, None] = None):
+        if conversation_id:
+            self.conversation_id = conversation_id
+
+        conversation_data = self._get_conversation(self.conversation_id)
+        self.turn_id = conversation_data["path"][-1]
+
+        data = self._build_data(prompt, "generate", self.turn_id, self.conversation_id)
+
+        r = self._do_conversation(data)
+
+        for line in r.iter_lines(decode_unicode=True):
+            if not line:
+                continue
+
+            if line.startswith("event:"):
+                event = line[6:]
+                if event == "result":
+                    r.close()
+                    break
+
+        return self._get_conversation(self.conversation_id)
