@@ -48,18 +48,20 @@ class ClovaX:
         """
         if not os.path.exists(cookie_file_src):
             raise FileNotFoundError("Cookie file not found.")
-
         with open(cookie_file_src, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#"):
-                    domain, flag, path, secure, expiration, name, value = line.split(
-                        "\t"
-                    )
-                    if name == "NID_AUT":
-                        self.NID_AUT = value
-                    elif name == "NID_SES":
+                    parts = line.split("\t")
+
+                    while len(parts) < 7:
+                        parts.append("None")
+
+                    domain, flag, path, secure, expiration, name, value = parts
+                    if name == "NID_SES":
                         self.NID_SES = value
+                    elif name == "NID_AUT":
+                        self.NID_AUT = value
                     elif name == "CVX_SES":
                         self.CVX_SES = value
         return
@@ -100,7 +102,6 @@ class ClovaX:
         Returns:
             dict: Conversation data.
         """
-
         self._init_session()
         data = self._build_data(prompt, "new")
         r = self.session.post(
@@ -110,6 +111,7 @@ class ClovaX:
         )
         self.conversation_id = ""
         if r.status_code != 200:
+            print(r.text)
             raise Exception("Error occurred while starting conversation.")
 
         # Iterate event stream, get event and datas
