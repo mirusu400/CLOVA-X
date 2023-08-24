@@ -12,10 +12,15 @@ def get_version():
     return version
 
 
+with open("README.md", "r", encoding="utf-8") as f:
+    long_description = f.read()
+
 setup(
     name="clovax",
     version=get_version(),
     description="Unofficial CLOVA X API",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="mirusu400",
     author_email="mirusu400@naver.com",
     url="https://github.com/mirusu400/CLOVA-X-API",
