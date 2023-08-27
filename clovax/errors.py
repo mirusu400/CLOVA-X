@@ -1,3 +1,6 @@
+import clovax.constants
+
+
 class UnauthorizedError(Exception):
     """Unauthorized error"""
 
@@ -17,3 +20,11 @@ class TooManyRequestsError(Exception):
 
     def __str__(self):
         return "Too many requests. Please try again later."
+
+
+class InvalidSkillsetError(Exception):
+    """Invalid skillset error"""
+
+    def __str__(self):
+        skillset = clovax.constants.AVAILABLE_SKILLSETS
+        return "Invalid skillset list. Available skillsets are: " + ", ".join(skillset)
