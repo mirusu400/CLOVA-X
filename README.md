@@ -40,7 +40,8 @@ c = ClovaX()
 c.get_cookie("[Your netscape cookie file]")
 log = c.start("Hello world!")
 print(log["text"])
-log = c.continue_conversation("Who are you?")
+# At this time, you can continue the conversation using existed session (conversation ID)
+log = c.conversation("Who are you?")
 print(log["text"])
 ```
 
