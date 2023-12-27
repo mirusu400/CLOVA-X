@@ -130,7 +130,7 @@ class ClovaX:
                 raise clovax.errors.TooManyRequestsError()
             else:
                 raise Exception(
-                    f"Error occurred while starting conversation. Error code: {r.status_code}"
+                    f"Error occurred while starting conversation. Error code: {r.status_code}, Error message: {r.text}"
                 )
         r.encoding = "utf-8"
         return r
